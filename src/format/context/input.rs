@@ -177,9 +177,11 @@ impl<'a> Iterator for PacketIter<'a> {
                     ));
                 },
 
-                Err(Error::Eof) => return None,
+                Err(Error::Other {
+                    errno: libc::EAGAIN,
+                }) => (),
 
-                Err(..) => (),
+                Err(..) => return None,
             }
         }
     }
