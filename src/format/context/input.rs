@@ -289,20 +289,10 @@ impl<'a> Iterator for PacketIter<'a> {
                     ));
                 },
 
-                Err(Error::Eof) => return None,
+                Err(Error::Other {
+                    errno: libc::EAGAIN,
+                }) => (),
 
-                // Skip a single corrupt packet and keep demuxing: a demuxer can
-                // resync past `AVERROR_INVALIDDATA`, and it is not latched into
-                // the `AVIOContext` (`pb->error`), so retrying makes progress.
-                Err(Error::InvalidData) => (),
-
-                // Every other error is terminal. A cancelled read's
-                // `AVERROR_EXIT`, or any I/O error, is latched into `pb->error`
-                // (aviobuf.c `fill_buffer`) and `av_read_frame` then returns it
-                // on EVERY subsequent call (demux.c rewrites even a later clean
-                // EOF back into the sticky error), so retrying would spin
-                // forever at 100% CPU. End the iteration instead. Callers that
-                // must observe these errors drive `Packet::read` directly.
                 Err(..) => return None,
             }
         }
